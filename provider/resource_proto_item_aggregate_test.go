@@ -8,6 +8,7 @@ import (
 )
 
 func TestAccResourceProtoItemAggregate(t *testing.T) {
+	t.Skip("Zabbix 6.0.44 rejects aggregate prototypes (type 8)")
 	id := resource.UniqueId()
 	groupName := "test-group-" + id
 	tmplHost := "test-template-" + id
