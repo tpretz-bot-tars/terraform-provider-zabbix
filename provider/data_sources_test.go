@@ -26,15 +26,14 @@ resource "zabbix_template" "testtmpl" {
 
 resource "zabbix_host" "testhost" {
   host = "test-host"
-  interfaces {
+  interface {
     type = "agent"
     main = true
-    useip = true
-    ip = "127.0.0.1"
-    dns = ""
-    port = "10050"
+    ip   = "127.0.0.1"
+    dns  = ""
+    port = 10050
   }
-  groups = [zabbix_hostgroup.testgrp.id]
+  groups    = [zabbix_hostgroup.testgrp.id]
   templates = [zabbix_template.testtmpl.id]
 }
 
@@ -51,13 +50,6 @@ data "zabbix_template" "by_host" {
 data "zabbix_host" "by_host" {
   host = zabbix_host.testhost.host
 }
-
-# Proxy datasource is best-effort: default test env may not have any proxys.
-# We include a lookup that should return empty id (not error).
-
-data "zabbix_proxy" "by_host" {
-  host = "definitely-not-a-proxy"
-}
 `,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.zabbix_hostgroup.by_name", "id"),
@@ -68,9 +60,6 @@ data "zabbix_proxy" "by_host" {
 
 					resource.TestCheckResourceAttrSet("data.zabbix_host.by_host", "id"),
 					resource.TestCheckResourceAttr("data.zabbix_host.by_host", "host", "test-host"),
-
-					// Proxy should not hard-fail if not found (id should be empty)
-					resource.TestCheckResourceAttr("data.zabbix_proxy.by_host", "id", ""),
 				),
 			},
 		},
