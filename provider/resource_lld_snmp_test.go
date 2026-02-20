@@ -1,12 +1,17 @@
 package provider
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 func TestAccResourceLLDSnmp(t *testing.T) {
+	id := resource.UniqueId()
+	groupName := "test-group-" + id
+	tmplHost := "test-template-" + id
+
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
@@ -14,13 +19,13 @@ func TestAccResourceLLDSnmp(t *testing.T) {
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: fmt.Sprintf(`
 resource "zabbix_hostgroup" "testgrp" {
-  name = "test-group"
+  name = %q
 }
 resource "zabbix_template" "testtmpl" {
   groups = [zabbix_hostgroup.testgrp.id]
-  host   = "test-template"
+  host   = %q
 }
 
 resource "zabbix_lld_snmp" "testrule" {
@@ -32,7 +37,7 @@ resource "zabbix_lld_snmp" "testrule" {
   snmp_oid       = ".1.3.6.1.2.1.1.3.0"
   snmp_community = "{$SNMP_COMMUNITY}"
 }
-`,
+`, groupName, tmplHost),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("zabbix_lld_snmp.testrule", "key", "lld.snmp.discovery"),
 					resource.TestCheckResourceAttr("zabbix_lld_snmp.testrule", "name", "LLD SNMP Rule"),
@@ -41,13 +46,13 @@ resource "zabbix_lld_snmp" "testrule" {
 				),
 			},
 			{
-				Config: `
+				Config: fmt.Sprintf(`
 resource "zabbix_hostgroup" "testgrp" {
-  name = "test-group"
+  name = %q
 }
 resource "zabbix_template" "testtmpl" {
   groups = [zabbix_hostgroup.testgrp.id]
-  host   = "test-template"
+  host   = %q
 }
 
 resource "zabbix_lld_snmp" "testrule" {
@@ -59,7 +64,7 @@ resource "zabbix_lld_snmp" "testrule" {
   snmp_oid       = ".1.3.6.1.2.1.1.5.0"
   snmp_community = "{$SNMP_COMMUNITY}"
 }
-`,
+`, groupName, tmplHost),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("zabbix_lld_snmp.testrule", "key", "lld.snmp.discovery2"),
 					resource.TestCheckResourceAttr("zabbix_lld_snmp.testrule", "name", "LLD SNMP Rule A"),
