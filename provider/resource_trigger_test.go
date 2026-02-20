@@ -5,11 +5,13 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/tpretz/go-zabbix-api"
 )
 
 func TestAccResourceTrigger(t *testing.T) {
-	t.Skip("Zabbix 4.x/5.x rejects the expression syntax we need")
-	// Use the documented expression format (Zabbix 6.x): function(/host/key,params)<op><constant>
+	// Zabbix trigger expression syntax differs across major versions.
+	// - v6+:   last(/host/key)=0
+	// - v4/v5: {host:key.last()}=0
 	// Avoid item keys with quoted parameters inside expressions (e.g. script["abc"]) as Zabbix may reject them.
 	id := resource.UniqueId()
 	groupName := "test-group-" + id
@@ -22,6 +24,11 @@ func TestAccResourceTrigger(t *testing.T) {
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
+				// Zabbix 6.0+ expression syntax
+				SkipFunc: func() (bool, error) {
+					api := testAccProvider.Meta().(*zabbix.API)
+					return api.Config.Version < 60000, nil
+				},
 				Config: fmt.Sprintf(`
 resource "zabbix_hostgroup" "testgrp" {
   name = %q
@@ -62,6 +69,56 @@ resource "zabbix_trigger" "testtrg" {
 				),
 			},
 			{
+				// Zabbix 4.x/5.x legacy expression syntax
+				SkipFunc: func() (bool, error) {
+					api := testAccProvider.Meta().(*zabbix.API)
+					return api.Config.Version >= 60000, nil
+				},
+				Config: fmt.Sprintf(`
+resource "zabbix_hostgroup" "testgrp" {
+  name = %q
+}
+
+resource "zabbix_host" "testhost" {
+  host = %q
+  groups = [zabbix_hostgroup.testgrp.id]
+
+  interface {
+    type = "agent"
+    dns  = "localhost"
+    port = 10050
+  }
+}
+
+resource "zabbix_item_trapper" "testitem" {
+  hostid = zabbix_host.testhost.id
+  key = "trapper.ping"
+
+  name = "Trapper Item"
+  valuetype = "unsigned"
+}
+
+resource "zabbix_trigger" "testtrg" {
+  name = "test-trigger"
+  expression = "{%s:trapper.ping.last()}=0"
+  priority = "warn"
+  enabled = true
+
+  depends_on = [zabbix_item_trapper.testitem]
+}
+`, groupName, hostName, hostName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("zabbix_trigger.testtrg", "name", "test-trigger"),
+					resource.TestCheckResourceAttr("zabbix_trigger.testtrg", "priority", "warn"),
+					resource.TestCheckResourceAttr("zabbix_trigger.testtrg", "enabled", "true"),
+				),
+			},
+			{
+				// Zabbix 6.0+ expression syntax (update)
+				SkipFunc: func() (bool, error) {
+					api := testAccProvider.Meta().(*zabbix.API)
+					return api.Config.Version < 60000, nil
+				},
 				Config: fmt.Sprintf(`
 resource "zabbix_hostgroup" "testgrp" {
   name = %q
@@ -89,6 +146,51 @@ resource "zabbix_item_trapper" "testitem" {
 resource "zabbix_trigger" "testtrg" {
   name = "test-trigger-a"
   expression = "last(/%s/trapper.ping)=1"
+  priority = "high"
+  enabled = false
+
+  depends_on = [zabbix_item_trapper.testitem]
+}
+`, groupName, hostName, hostName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("zabbix_trigger.testtrg", "name", "test-trigger-a"),
+					resource.TestCheckResourceAttr("zabbix_trigger.testtrg", "priority", "high"),
+					resource.TestCheckResourceAttr("zabbix_trigger.testtrg", "enabled", "false"),
+				),
+			},
+			{
+				// Zabbix 4.x/5.x legacy expression syntax (update)
+				SkipFunc: func() (bool, error) {
+					api := testAccProvider.Meta().(*zabbix.API)
+					return api.Config.Version >= 60000, nil
+				},
+				Config: fmt.Sprintf(`
+resource "zabbix_hostgroup" "testgrp" {
+  name = %q
+}
+
+resource "zabbix_host" "testhost" {
+  host = %q
+  groups = [zabbix_hostgroup.testgrp.id]
+
+  interface {
+    type = "agent"
+    dns  = "localhost"
+    port = 10050
+  }
+}
+
+resource "zabbix_item_trapper" "testitem" {
+  hostid = zabbix_host.testhost.id
+  key = "trapper.ping"
+
+  name = "Trapper Item"
+  valuetype = "unsigned"
+}
+
+resource "zabbix_trigger" "testtrg" {
+  name = "test-trigger-a"
+  expression = "{%s:trapper.ping.last()}=1"
   priority = "high"
   enabled = false
 
