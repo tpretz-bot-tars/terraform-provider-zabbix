@@ -41,6 +41,7 @@ resource "zabbix_lld_dependent" "testrule" {
   key    = "lld.dependent.discovery"
   name   = "LLD Dependent Rule"
   master_itemid = zabbix_item_simple.parent.id
+  delay = 0
 }
 `, groupName, tmplHost),
 				Check: resource.ComposeTestCheckFunc(
@@ -72,6 +73,7 @@ resource "zabbix_lld_dependent" "testrule" {
   key    = "lld.dependent.discovery2"
   name   = "LLD Dependent Rule A"
   master_itemid = zabbix_item_simple.parent.id
+  delay = 0
 }
 `, groupName, tmplHost),
 				Check: resource.ComposeTestCheckFunc(
