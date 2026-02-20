@@ -8,10 +8,11 @@ import (
 )
 
 func TestAccResourceTrigger(t *testing.T) {
-	t.Skip("Zabbix 6.0.44 rejects trigger expressions referencing script[...] with quotes")
+	// Use the documented expression format (Zabbix 6.x): function(/host/key,params)<op><constant>
+	// Avoid item keys with quoted parameters inside expressions (e.g. script["abc"]) as Zabbix may reject them.
 	id := resource.UniqueId()
 	groupName := "test-group-" + id
-	tmplHost := "test-template-" + id
+	hostName := "test-host-" + id
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -24,25 +25,35 @@ func TestAccResourceTrigger(t *testing.T) {
 resource "zabbix_hostgroup" "testgrp" {
   name = %q
 }
-resource "zabbix_template" "testtmpl" {
-  groups = [zabbix_hostgroup.testgrp.id]
-  host   = %q
-}
-resource "zabbix_item_simple" "testitem" {
-  hostid = zabbix_template.testtmpl.id
-  key = "script[\"abc\"]"
 
-  name = "Ext Item"
-  valuetype = "text"
+resource "zabbix_host" "testhost" {
+  host = %q
+  groups = [zabbix_hostgroup.testgrp.id]
+
+  interface {
+    type = "agent"
+    dns  = "localhost"
+    port = 10050
+  }
+}
+
+resource "zabbix_item_trapper" "testitem" {
+  hostid = zabbix_host.testhost.id
+  key = "trapper.ping"
+
+  name = "Trapper Item"
+  valuetype = "unsigned"
 }
 
 resource "zabbix_trigger" "testtrg" {
   name = "test-trigger"
-  expression = "{%s:script[\"abc\"].last()}=0"
+  expression = "last(/%s/trapper.ping)=0"
   priority = "warn"
   enabled = true
+
+  depends_on = [zabbix_item_trapper.testitem]
 }
-`, groupName, tmplHost, tmplHost),
+`, groupName, hostName, hostName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("zabbix_trigger.testtrg", "name", "test-trigger"),
 					resource.TestCheckResourceAttr("zabbix_trigger.testtrg", "priority", "warn"),
@@ -54,25 +65,35 @@ resource "zabbix_trigger" "testtrg" {
 resource "zabbix_hostgroup" "testgrp" {
   name = %q
 }
-resource "zabbix_template" "testtmpl" {
-  groups = [zabbix_hostgroup.testgrp.id]
-  host   = %q
-}
-resource "zabbix_item_simple" "testitem" {
-  hostid = zabbix_template.testtmpl.id
-  key = "script[\"abc\"]"
 
-  name = "Ext Item"
-  valuetype = "text"
+resource "zabbix_host" "testhost" {
+  host = %q
+  groups = [zabbix_hostgroup.testgrp.id]
+
+  interface {
+    type = "agent"
+    dns  = "localhost"
+    port = 10050
+  }
+}
+
+resource "zabbix_item_trapper" "testitem" {
+  hostid = zabbix_host.testhost.id
+  key = "trapper.ping"
+
+  name = "Trapper Item"
+  valuetype = "unsigned"
 }
 
 resource "zabbix_trigger" "testtrg" {
   name = "test-trigger-a"
-  expression = "{%s:script[\"abc\"].last()}=1"
+  expression = "last(/%s/trapper.ping)=1"
   priority = "high"
   enabled = false
+
+  depends_on = [zabbix_item_trapper.testitem]
 }
-`, groupName, tmplHost, tmplHost),
+`, groupName, hostName, hostName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("zabbix_trigger.testtrg", "name", "test-trigger-a"),
 					resource.TestCheckResourceAttr("zabbix_trigger.testtrg", "priority", "high"),
