@@ -8,6 +8,7 @@ import (
 )
 
 func TestAccResourceLLDDependent(t *testing.T) {
+	t.Skip("Zabbix 4.0/5.0 do not accept type=18 dependent rules")
 	id := resource.UniqueId()
 	groupName := "test-group-" + id
 	tmplHost := "test-template-" + id
