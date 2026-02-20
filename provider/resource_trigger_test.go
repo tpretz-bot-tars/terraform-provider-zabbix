@@ -24,10 +24,10 @@ func TestAccResourceTrigger(t *testing.T) {
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				// Zabbix 6.0+ expression syntax
+				// Zabbix >= 5.4 expression syntax
 				SkipFunc: func() (bool, error) {
 					api := testAccProvider.Meta().(*zabbix.API)
-					return api.Config.Version < 60000, nil
+					return api.Config.Version < 50400, nil
 				},
 				Config: fmt.Sprintf(`
 resource "zabbix_hostgroup" "testgrp" {
@@ -69,10 +69,10 @@ resource "zabbix_trigger" "testtrg" {
 				),
 			},
 			{
-				// Zabbix 4.x/5.x legacy expression syntax
+				// Zabbix < 5.4 legacy expression syntax
 				SkipFunc: func() (bool, error) {
 					api := testAccProvider.Meta().(*zabbix.API)
-					return api.Config.Version >= 60000, nil
+					return api.Config.Version >= 50400, nil
 				},
 				Config: fmt.Sprintf(`
 resource "zabbix_hostgroup" "testgrp" {
@@ -114,10 +114,10 @@ resource "zabbix_trigger" "testtrg" {
 				),
 			},
 			{
-				// Zabbix 6.0+ expression syntax (update)
+				// Zabbix >= 5.4 expression syntax (update)
 				SkipFunc: func() (bool, error) {
 					api := testAccProvider.Meta().(*zabbix.API)
-					return api.Config.Version < 60000, nil
+					return api.Config.Version < 50400, nil
 				},
 				Config: fmt.Sprintf(`
 resource "zabbix_hostgroup" "testgrp" {
@@ -159,10 +159,10 @@ resource "zabbix_trigger" "testtrg" {
 				),
 			},
 			{
-				// Zabbix 4.x/5.x legacy expression syntax (update)
+				// Zabbix < 5.4 legacy expression syntax (update)
 				SkipFunc: func() (bool, error) {
 					api := testAccProvider.Meta().(*zabbix.API)
-					return api.Config.Version >= 60000, nil
+					return api.Config.Version >= 50400, nil
 				},
 				Config: fmt.Sprintf(`
 resource "zabbix_hostgroup" "testgrp" {

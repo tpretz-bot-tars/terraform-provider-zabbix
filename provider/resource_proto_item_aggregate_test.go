@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/tpretz/go-zabbix-api"
 )
 
 func TestAccResourceProtoItemAggregate(t *testing.T) {
-	t.Skip("Zabbix 6.0.44 rejects aggregate prototypes (type 8)")
 	id := resource.UniqueId()
 	groupName := "test-group-" + id
 	tmplHost := "test-template-" + id
@@ -18,6 +18,11 @@ func TestAccResourceProtoItemAggregate(t *testing.T) {
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
+				SkipFunc: func() (bool, error) {
+					api := testAccProvider.Meta().(*zabbix.API)
+					// Zabbix >= 5.4 rejects aggregate item prototypes (type=8) (observed in 5.4.12 and 6.0.44).
+					return api.Config.Version >= 50400, nil
+				},
 				Config: fmt.Sprintf(`
 resource "zabbix_hostgroup" "testgrp" {
   name = %q
@@ -39,7 +44,6 @@ resource "zabbix_proto_item_aggregate" "testitem" {
   name   = "Proto Aggregate Item"
   valuetype = "unsigned"
   delay = "1m"
-  type = "0"
 }
 `, groupName, tmplHost),
 				Check: resource.ComposeTestCheckFunc(
@@ -47,6 +51,10 @@ resource "zabbix_proto_item_aggregate" "testitem" {
 				),
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					api := testAccProvider.Meta().(*zabbix.API)
+					return api.Config.Version >= 50400, nil
+				},
 				Config: fmt.Sprintf(`
 resource "zabbix_hostgroup" "testgrp" {
   name = %q
@@ -68,7 +76,6 @@ resource "zabbix_proto_item_aggregate" "testitem" {
   name   = "Proto Aggregate Item A"
   valuetype = "unsigned"
   delay = "30s"
-  type = "0"
 }
 `, groupName, tmplHost),
 				Check: resource.ComposeTestCheckFunc(
