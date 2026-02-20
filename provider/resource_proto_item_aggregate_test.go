@@ -40,7 +40,7 @@ resource "zabbix_lld_simple" "rule" {
 resource "zabbix_proto_item_aggregate" "testitem" {
   ruleid = zabbix_lld_simple.rule.id
   hostid = zabbix_template.testtmpl.id
-  key    = "aggregate.key"
+  key    = "grpavg[\"Zabbix servers\",\"system.uptime\",\"last\",\"0\"]"
   name   = "Proto Aggregate Item"
   valuetype = "unsigned"
   delay = "1m"
@@ -72,14 +72,14 @@ resource "zabbix_lld_simple" "rule" {
 resource "zabbix_proto_item_aggregate" "testitem" {
   ruleid = zabbix_lld_simple.rule.id
   hostid = zabbix_template.testtmpl.id
-  key    = "aggregate.key2"
+  key    = "grpmax[\"Zabbix servers\",\"system.uptime\",\"last\",\"0\"]"
   name   = "Proto Aggregate Item A"
   valuetype = "unsigned"
   delay = "30s"
 }
 `, groupName, tmplHost),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("zabbix_proto_item_aggregate.testitem", "key", "aggregate.key2"),
+					resource.TestCheckResourceAttr("zabbix_proto_item_aggregate.testitem", "key", "grpmax[\"Zabbix servers\",\"system.uptime\",\"last\",\"0\"]"),
 					resource.TestCheckResourceAttr("zabbix_proto_item_aggregate.testitem", "delay", "30s"),
 				),
 			},
