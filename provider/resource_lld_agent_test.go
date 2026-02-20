@@ -1,12 +1,17 @@
 package provider
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 func TestAccResourceLLDAgent(t *testing.T) {
+	id := resource.UniqueId()
+	groupName := "test-group-" + id
+	tmplHost := "test-template-" + id
+
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
@@ -14,13 +19,13 @@ func TestAccResourceLLDAgent(t *testing.T) {
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: fmt.Sprintf(`
 resource "zabbix_hostgroup" "testgrp" {
-  name = "test-group"
+  name = %q
 }
 resource "zabbix_template" "testtmpl" {
   groups = [zabbix_hostgroup.testgrp.id]
-  host   = "test-template"
+  host   = %q
 }
 
 resource "zabbix_lld_agent" "testrule" {
@@ -29,7 +34,7 @@ resource "zabbix_lld_agent" "testrule" {
   name   = "LLD Agent Rule"
   active = false
 }
-`,
+`, groupName, tmplHost),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("zabbix_lld_agent.testrule", "key", "lld.agent.discovery"),
 					resource.TestCheckResourceAttr("zabbix_lld_agent.testrule", "name", "LLD Agent Rule"),
@@ -37,13 +42,13 @@ resource "zabbix_lld_agent" "testrule" {
 				),
 			},
 			{
-				Config: `
+				Config: fmt.Sprintf(`
 resource "zabbix_hostgroup" "testgrp" {
-  name = "test-group"
+  name = %q
 }
 resource "zabbix_template" "testtmpl" {
   groups = [zabbix_hostgroup.testgrp.id]
-  host   = "test-template"
+  host   = %q
 }
 
 resource "zabbix_lld_agent" "testrule" {
@@ -52,7 +57,7 @@ resource "zabbix_lld_agent" "testrule" {
   name   = "LLD Agent Rule A"
   active = true
 }
-`,
+`, groupName, tmplHost),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("zabbix_lld_agent.testrule", "key", "lld.agent.discovery2"),
 					resource.TestCheckResourceAttr("zabbix_lld_agent.testrule", "name", "LLD Agent Rule A"),
