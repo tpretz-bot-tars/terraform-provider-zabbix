@@ -1,12 +1,17 @@
 package provider
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 func TestAccResourceLLDDependent(t *testing.T) {
+	id := resource.UniqueId()
+	groupName := "test-group-" + id
+	tmplHost := "test-template-" + id
+
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
@@ -14,13 +19,13 @@ func TestAccResourceLLDDependent(t *testing.T) {
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: fmt.Sprintf(`
 resource "zabbix_hostgroup" "testgrp" {
-  name = "test-group"
+  name = %q
 }
 resource "zabbix_template" "testtmpl" {
   groups = [zabbix_hostgroup.testgrp.id]
-  host   = "test-template"
+  host   = %q
 }
 
 resource "zabbix_item_simple" "parent" {
@@ -37,7 +42,7 @@ resource "zabbix_lld_dependent" "testrule" {
   name   = "LLD Dependent Rule"
   master_itemid = zabbix_item_simple.parent.id
 }
-`,
+`, groupName, tmplHost),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("zabbix_lld_dependent.testrule", "key", "lld.dependent.discovery"),
 					resource.TestCheckResourceAttr("zabbix_lld_dependent.testrule", "name", "LLD Dependent Rule"),
@@ -45,13 +50,13 @@ resource "zabbix_lld_dependent" "testrule" {
 				),
 			},
 			{
-				Config: `
+				Config: fmt.Sprintf(`
 resource "zabbix_hostgroup" "testgrp" {
-  name = "test-group"
+  name = %q
 }
 resource "zabbix_template" "testtmpl" {
   groups = [zabbix_hostgroup.testgrp.id]
-  host   = "test-template"
+  host   = %q
 }
 
 resource "zabbix_item_simple" "parent" {
@@ -68,7 +73,7 @@ resource "zabbix_lld_dependent" "testrule" {
   name   = "LLD Dependent Rule A"
   master_itemid = zabbix_item_simple.parent.id
 }
-`,
+`, groupName, tmplHost),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("zabbix_lld_dependent.testrule", "key", "lld.dependent.discovery2"),
 					resource.TestCheckResourceAttr("zabbix_lld_dependent.testrule", "name", "LLD Dependent Rule A"),
