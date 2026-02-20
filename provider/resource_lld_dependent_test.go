@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/tpretz/go-zabbix-api"
 )
 
 func TestAccResourceLLDDependent(t *testing.T) {
-	t.Skip("Zabbix 4.0/5.0 do not accept type=18 dependent rules")
 	id := resource.UniqueId()
 	groupName := "test-group-" + id
 	tmplHost := "test-template-" + id
@@ -20,6 +20,11 @@ func TestAccResourceLLDDependent(t *testing.T) {
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
+				SkipFunc: func() (bool, error) {
+					api := testAccProvider.Meta().(*zabbix.API)
+					// Zabbix < 5.4 rejects dependent LLD rules (type=18).
+					return api.Config.Version < 50400, nil
+				},
 				Config: fmt.Sprintf(`
 resource "zabbix_hostgroup" "testgrp" {
   name = %q
@@ -52,6 +57,10 @@ resource "zabbix_lld_dependent" "testrule" {
 				),
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					api := testAccProvider.Meta().(*zabbix.API)
+					return api.Config.Version < 50400, nil
+				},
 				Config: fmt.Sprintf(`
 resource "zabbix_hostgroup" "testgrp" {
   name = %q
