@@ -1,12 +1,18 @@
 package provider
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 func TestAccDataSourcesTemplateHostgroupHostProxy(t *testing.T) {
+	id := resource.UniqueId()
+	groupName := "test-group-" + id
+	tmplHost := "test-template-" + id
+	hostName := "test-host-" + id
+
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
@@ -14,18 +20,18 @@ func TestAccDataSourcesTemplateHostgroupHostProxy(t *testing.T) {
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: fmt.Sprintf(`
 resource "zabbix_hostgroup" "testgrp" {
-  name = "test-group"
+  name = %q
 }
 
 resource "zabbix_template" "testtmpl" {
   groups = [zabbix_hostgroup.testgrp.id]
-  host   = "test-template"
+  host   = %q
 }
 
 resource "zabbix_host" "testhost" {
-  host = "test-host"
+  host = %q
   interface {
     type = "agent"
     main = true
@@ -50,16 +56,16 @@ data "zabbix_template" "by_host" {
 data "zabbix_host" "by_host" {
   host = zabbix_host.testhost.host
 }
-`,
+`, groupName, tmplHost, hostName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.zabbix_hostgroup.by_name", "id"),
-					resource.TestCheckResourceAttr("data.zabbix_hostgroup.by_name", "name", "test-group"),
+					resource.TestCheckResourceAttr("data.zabbix_hostgroup.by_name", "name", groupName),
 
 					resource.TestCheckResourceAttrSet("data.zabbix_template.by_host", "id"),
-					resource.TestCheckResourceAttr("data.zabbix_template.by_host", "host", "test-template"),
+					resource.TestCheckResourceAttr("data.zabbix_template.by_host", "host", tmplHost),
 
 					resource.TestCheckResourceAttrSet("data.zabbix_host.by_host", "id"),
-					resource.TestCheckResourceAttr("data.zabbix_host.by_host", "host", "test-host"),
+					resource.TestCheckResourceAttr("data.zabbix_host.by_host", "host", hostName),
 				),
 			},
 		},
